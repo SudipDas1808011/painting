@@ -60,11 +60,43 @@
         let color = 'black';
         let erasing = false;
 
+        // Store the drawing data
+        let drawingData = [];
+
         // Function to resize the canvas
         function resizeCanvas() {
+            const oldWidth = canvas.width;
+            const oldHeight = canvas.height;
+
             canvas.width = window.innerWidth * 0.95; // 95% of the window width
             canvas.height = window.innerHeight * 0.8; // 80% of the window height
+
+            // Redraw the saved drawing data
+            redrawCanvas(oldWidth, oldHeight);
+        }
+
+        // Function to redraw the canvas after resizing
+        function redrawCanvas(oldWidth, oldHeight) {
+            const scaleX = canvas.width / oldWidth;
+            const scaleY = canvas.height / oldHeight;
+
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+            drawingData.forEach(path => {
+                ctx.beginPath();
+                ctx.strokeStyle = path.color;
+                ctx.lineWidth = path.lineWidth;
+                path.points.forEach((point, index) => {
+                    const scaledX = point.x * scaleX;
+                    const scaledY = point.y * scaleY;
+                    if (index === 0) {
+                        ctx.moveTo(scaledX, scaledY);
+                    } else {
+                        ctx.lineTo(scaledX, scaledY);
+                    }
+                });
+                ctx.stroke();
+            });
         }
 
         // Function to get the position of the touch or mouse event
@@ -89,6 +121,14 @@
             const pos = getPosition(event);
             ctx.beginPath();
             ctx.moveTo(pos.x, pos.y);
+
+            // Start a new path in the drawing data
+            drawingData.push({
+                color: erasing ? '#fff' : color,
+                lineWidth: erasing ? 30 : 2,
+                points: [{ x: pos.x, y: pos.y }]
+            });
+
             event.preventDefault(); // Prevent scrolling on touch devices
         }
 
@@ -102,6 +142,11 @@
                     ctx.lineWidth = 2;
                     ctx.lineTo(pos.x, pos.y);
                     ctx.stroke();
+                }
+
+                // Add the current point to the last path in the drawing data
+                if (drawingData.length > 0) {
+                    drawingData[drawingData.length - 1].points.push({ x: pos.x, y: pos.y });
                 }
             }
             event.preventDefault(); // Prevent scrolling on touch devices
